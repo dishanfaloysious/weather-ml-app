@@ -1,3 +1,4 @@
+
 import unittest
 from app import app, classify_weather, load_model
 import numpy as np
@@ -13,7 +14,7 @@ class TestUnit(unittest.TestCase):
 			'temperature': '270.277',
 			'pressure': '1006',
 			'humidity': '84',
-			# 'wind_speed' is missing
+			'wind_speed':'3.4',
 			'wind_deg': '274',
 			'rain_1h': '0',
 			'rain_3h': '0',
@@ -22,29 +23,33 @@ class TestUnit(unittest.TestCase):
 		}
 		response = self.client.post('/', data=form_data)
 
+
+                self.assertNotEqual(response.status_code, 200)
+                self.assertIn(b'missing', response.data.lower())
+
 	# Complete this function to test that the model can be loaded correctly
 	def test_model_can_be_loaded(self):
 		model = load_model()
+                self.assertIsNotNone(model)
 		
 
 	# Test model classification is within the 9 classes, each time for a different class with three different inputs
 	def test_clear_classification_output(self):
 		test_input = np.array([269.686,1002,78,0,23,0,0,0,0]).reshape(1,-1)
 		class_result, _ = classify_weather(test_input) 
-		# Ensure that 'clear' class is returned
+		self.assertEqual(class_result, 'clear')
 		
 	def test_rainy_classification_output(self):
 		test_input = np.array([279.626,998,99,1,314,0.3,0,0,88]).reshape(1,-1)
 		class_result, _ = classify_weather(test_input) 
-		# Ensure that 'rainy' class is returned
+                self.assertEqual(class_result, 'rainy')
 		
 
 	def test_foggy_classification_output(self):
 
 		test_input = np.array([289.47,1015,88,2,300,0,0,0,20]).reshape(1,-1)
-		class_result, _ = classify_weather(test_input) 
-
-		# Ensure that 'foggy' class is returned
+		class_result, _ = classify_weather(test_input)  
+                self.assertEqual(class_result, 'foggy')
 		
 if __name__ == '__main__':
 	unittest.main()
