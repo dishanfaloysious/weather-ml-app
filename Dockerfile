@@ -2,11 +2,11 @@ FROM python:3.9-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY Weather-ML-CICD-Incomplete/ /app/
 
-COPY . .
+RUN python -m pip install --no-cache-dir -r requirements.txt
 
 EXPOSE 5000
 
 CMD ["python", "app.py"]
+
