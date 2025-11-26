@@ -1,0 +1,46 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ "main", "bugfix" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    # (a)detect repo changes 
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # (b)setup Python + install requirements  
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install Dependencies
+      run: |
+        pip install -r requirements.txt
+
+    # (c)run tests
+    - name: Run smoke test
+      run: python3 -m unittest smoke_test.py
+
+    - name: Run unit test
+      run: python3 -m unittest unit_test.py
+
+    - name: Run integration test
+      run: python3 -m unittest integration_test.py
+
+    # (d)docker image
+    - name: Build Docker Image
+      run: |
+        docker build -t weather-ml-app:latest .
+
+    # (e)run a container to verify it launches
+    - name: Test container startup
+      run: |
+        docker run --rm weather-ml-app:latest python --version
