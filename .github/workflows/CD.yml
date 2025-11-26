@@ -1,4 +1,4 @@
-name: CD Pipeline
+ame: CD Pipeline
 
 on:
   workflow_run:
@@ -9,29 +9,33 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
+      # Step 1: Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # Step 2: Set up kubeconfig
       - name: Set up kubeconfig
         run: |
           mkdir -p ~/.kube
           echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
           chmod 600 ~/.kube/config
 
+      # Step 3: Log in to Docker Hub securely
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # Step 4: Build and push Docker image
       - name: Build and push Docker image
         run: |
           docker build -t weather-ml-app:latest .
           docker tag weather-ml-app:latest ${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:latest
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:latest
 
+      # Step 5: Deploy to Kubernetes
       - name: Deploy to Kubernetes
         run: |
           kubectl set image deployment/weather-ml weather-ml=${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:latest
