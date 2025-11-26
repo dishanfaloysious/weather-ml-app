@@ -79,7 +79,7 @@ def home():
 
     return render_template('form.html')
 
-#pipeline test
+#CD TEST
 
 
 if __name__ == '__main__':
