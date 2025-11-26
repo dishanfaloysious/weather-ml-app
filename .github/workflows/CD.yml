@@ -26,9 +26,9 @@ jobs:
 
       - name: Build Docker image
         run: |
-          cd Weather-ML-CICD-Incomplete
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:latest .
-          docker tag ${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:latest ${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:${{ github.sha }}
+          docker tag ${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:latest \
+               ${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:${{ github.sha }}
 
       - name: Push Docker image
         run: |
