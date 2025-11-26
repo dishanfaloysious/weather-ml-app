@@ -1,3 +1,5 @@
+name: CD Pipeline
+
 on:
   workflow_run:
     workflows: ["CI Pipeline"]
@@ -10,35 +12,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout code
+      # 1. Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Set up kubeconfig
+      # 2. Set up kubeconfig
       - name: Set up kubeconfig
         run: |
           mkdir -p ~/.kube
           echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
           chmod 600 ~/.kube/config
 
-      # Log in to Docker Hub
+      # 3. Log in to Docker Hub
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Build & push Docker image
+      # 4. Build and push Docker image
       - name: Build and push Docker image
         env:
           IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app
           COMMIT_SHA: ${{ github.sha }}
         run: |
-          docker build -t $IMAGE_NAME:latest -t $IMAGE_NAME:$COMMIT_SHA .
+          # Ensure correct path for Docker context
+          docker build -t $IMAGE_NAME:latest -t $IMAGE_NAME:$COMMIT_SHA ./Weather-ML-CICD-Incomplete
           docker push $IMAGE_NAME:latest
           docker push $IMAGE_NAME:$COMMIT_SHA
 
-      # Deploy to Kubernetes
+      # 5. Deploy to Kubernetes
       - name: Deploy to Kubernetes
         env:
           IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app
