@@ -44,3 +44,11 @@ jobs:
       # (e) run a container to verify it launches
       - name: Test container startup
         run: docker run --rm weather-ml-app:latest python --version
+
+  deploy:
+    needs: build-and-test
+    uses: ./.github/workflows/deploy.yml
+    with:
+      dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
+      dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}
+      kube_config: ${{ secrets.KUBE_CONFIG }}
