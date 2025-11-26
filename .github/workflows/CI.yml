@@ -11,9 +11,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # (a) detect repo changes
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # (b) setup Python + install requirements
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -22,6 +24,7 @@ jobs:
       - name: Install Dependencies
         run: pip install -r Weather-ML-CICD-Incomplete/requirements.txt
 
+      # (c) run tests
       - name: Run unit test
         working-directory: Weather-ML-CICD-Incomplete
         run: python unit_test.py
@@ -34,16 +37,10 @@ jobs:
         working-directory: Weather-ML-CICD-Incomplete
         run: python integration_test.py
 
+      # (d) docker image
       - name: Build Docker Image
         run: docker build -t weather-ml-app:latest .
 
+      # (e) run a container to verify it launches
       - name: Test container startup
         run: docker run --rm weather-ml-app:latest python --version
-
-  deploy:
-    needs: build-and-test
-    uses: ./.github/workflows/deploy.yml
-    with:
-      dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
-      dockerhub_token: ${{ secrets.DOCKERHUB_TOKEN }}
-      kube_config: ${{ secrets.KUBE_CONFIG }}
