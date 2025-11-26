@@ -27,13 +27,13 @@ jobs:
 
     # (c)run tests
     - name: Run smoke test
-      run: python smoke_test.py
+      run: python Weather-ML-CICD-Incomplete/smoke_test.py
 
     - name: Run unit test
-      run: python unit_test.py
+      run: python Weather-ML-CICD-Incomplete/unit_test.py
 
     - name: Run integration test
-      run: python integration_test.py
+      run: python Weather-ML-CICD-Incomplete/integration_test.py
 
     # (d)docker image
     - name: Build Docker Image
