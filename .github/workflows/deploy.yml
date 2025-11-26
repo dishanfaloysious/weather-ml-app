@@ -1,4 +1,5 @@
 name: CD Pipeline
+
 on:
   workflow_call:
     inputs:
@@ -7,14 +8,15 @@ on:
         type: string
       dockerhub_token:
         required: true
-        type: secret
+        type: string   # changed from 'secret'
       kube_config:
         required: true
-        type: secret
+        type: string   # changed from 'secret'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
