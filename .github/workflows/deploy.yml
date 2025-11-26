@@ -1,0 +1,49 @@
+name: CD Pipeline
+on:
+  workflow_call:
+    inputs:
+      dockerhub_username:
+        required: true
+        type: string
+      dockerhub_token:
+        required: true
+        type: secret
+      kube_config:
+        required: true
+        type: secret
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ inputs.kube_config }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ inputs.dockerhub_username }}
+          password: ${{ inputs.dockerhub_token }}
+
+      - name: Build and push Docker image
+        env:
+          IMAGE_NAME: ${{ inputs.dockerhub_username }}/weather-ml-app
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          docker build -t $IMAGE_NAME:latest -t $IMAGE_NAME:$COMMIT_SHA .
+          docker push $IMAGE_NAME:latest
+          docker push $IMAGE_NAME:$COMMIT_SHA
+
+      - name: Deploy to Kubernetes
+        env:
+          IMAGE_NAME: ${{ inputs.dockerhub_username }}/weather-ml-app
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          kubectl set image deployment/weather-ml weather-ml=$IMAGE_NAME:$COMMIT_SHA --record
+          kubectl rollout status deployment/weather-ml
