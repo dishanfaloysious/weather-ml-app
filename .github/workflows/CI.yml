@@ -1,46 +1,36 @@
 name: CI Pipeline
-
 on:
   push:
     branches: [ "main", "bugfix" ]
   pull_request:
     branches: [ "main" ]
-
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-
     steps:
       # (a) detect repo changes
       - name: Checkout code
         uses: actions/checkout@v3
-
       # (b) setup Python + install requirements
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-
       - name: Install Dependencies
         run: pip install -r Weather-ML-CICD-Incomplete/requirements.txt
-
       # (c) run tests
       - name: Run unit test
         working-directory: Weather-ML-CICD-Incomplete
         run: python unit_test.py
-
       - name: Run smoke test
         working-directory: Weather-ML-CICD-Incomplete
         run: python smoke_test.py
-
       - name: Run integration test
         working-directory: Weather-ML-CICD-Incomplete
         run: python integration_test.py
-
       # (d) docker image
       - name: Build Docker Image
         run: docker build -t weather-ml-app:latest .
-
       # (e) run a container to verify it launches
       - name: Test container startup
         run: docker run --rm weather-ml-app:latest python --version
