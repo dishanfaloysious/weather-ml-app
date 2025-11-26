@@ -24,6 +24,9 @@ jobs:
         run: |
           docker info | grep Username || echo "Docker login successful"
 
+      - name: Debug Docker login
+        run: docker info
+
       - name: Build Docker image
         run: |
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:latest .
