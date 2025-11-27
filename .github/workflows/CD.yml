@@ -8,7 +8,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: self-hosted
+    runs-on: self-hosted  # Uses your EC2 runner
 
     steps:
       - name: Checkout code
@@ -17,17 +17,20 @@ jobs:
       - name: Set kubeconfig
         run: export KUBECONFIG=$HOME/.kube/config
 
-      - name: Deploy weather app
+      - name: Deploy weather app (rolling update)
         run: |
-          # Delete existing deployment and service if they exist
-          kubectl delete deployment weather-ml-app --ignore-not-found
-          kubectl delete service weather-ml-app --ignore-not-found
+          # Check if deployment exists
+          if kubectl get deployment weather-ml-app; then
+            # Rolling update: update the image without deleting the deployment
+            kubectl set image deployment/weather-ml-app weather-ml-app=${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:v1 --record
+          else
+            # Create deployment if it doesn’t exist yet
+            kubectl create deployment weather-ml-app --image=${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:v1
+            kubectl expose deployment weather-ml-app --type=NodePort --port=5000
+          fi
           
-          # Create new deployment with your Docker image
-          kubectl create deployment weather-ml-app --image=${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:v1
-          
-          # Expose it via NodePort on port 5000
-          kubectl expose deployment weather-ml-app --type=NodePort --port=5000
-          
-          # Wait for pods to be ready
+          # Wait for the rollout to finish
           kubectl rollout status deployment/weather-ml-app
+
+      - name: Verify deployment
+        run: kubectl get pods -o wide
