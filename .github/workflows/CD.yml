@@ -15,28 +15,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
-      - name: Log in to Docker Hub (direct method)
-        run: |
-          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
-          
-      - name: Show docker login username
-        run: docker info | grep Username
-
-      - name: Debug Docker login
-        run: docker info
-
-      - name: Build Docker image
-        run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:latest .
-          docker tag ${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:latest \
-               ${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:${{ github.sha }}
-
-      - name: Push Docker image
-        run: |
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:latest
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:${{ github.sha }}
-
+        
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
 
