@@ -1,36 +1,33 @@
-name: CD Pipeline
+name: CD pipeline
 
 on:
   workflow_run:
-    workflows: ["CI Pipeline"]
+    workflows: ["CI Pipeline"]  # Replace with your CI workflow name
     types:
       - completed
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      # --- kubectl setup ---
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v3
+      - name: Set kubeconfig
+        run: export KUBECONFIG=$HOME/.kube/config
 
-      # --- Write kubeconfig directly (plain YAML) ---
-      - name: Configure kubeconfig
+      - name: Deploy weather app
         run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_PLAIN }}" > ~/.kube/config
-
-      # --- Apply K8s manifests ---
-      - name: Apply manifests
-        run: |
-          kubectl apply -f k8s/deployment.yml
-          kubectl apply -f k8s/service.yml
-
-      # --- Rolling update (zero downtime) ---
-      - name: Wait for rollout
-        run: |
-          kubectl rollout status deployment/weather-ml-deployment --timeout=120s
+          # Delete existing deployment and service if they exist
+          kubectl delete deployment weather-ml-app --ignore-not-found
+          kubectl delete service weather-ml-app --ignore-not-found
+          
+          # Create new deployment with your Docker image
+          kubectl create deployment weather-ml-app --image=${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:v1
+          
+          # Expose it via NodePort on port 5000
+          kubectl expose deployment weather-ml-app --type=NodePort --port=5000
+          
+          # Wait for pods to be ready
+          kubectl rollout status deployment/weather-ml-app
