@@ -11,43 +11,45 @@ jobs:
       # (a) detect repo changes
       - name: Checkout code
         uses: actions/checkout@v3
+      
       # (b) setup Python + install requirements
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
+      
       - name: Install Dependencies
         run: pip install -r Weather-ML-CICD-Incomplete/requirements.txt
+      
       # (c) run tests
       - name: Run unit test
         working-directory: Weather-ML-CICD-Incomplete
         run: python unit_test.py
+      
       - name: Run smoke test
         working-directory: Weather-ML-CICD-Incomplete
         run: python smoke_test.py
+      
       - name: Run integration test
         working-directory: Weather-ML-CICD-Incomplete
         run: python integration_test.py
+      
       # (d) docker image
       - name: Build Docker Image
         run: docker build -t weather-ml-app:latest .
+      
       # (e) run a container to verify it launches
       - name: Test container startup
         run: docker run --rm weather-ml-app:latest python --version
-
-            # (f) push image to DockerHub
+      
+      # (f) push image to DockerHub
       - name: Log in to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Tag Docker image for DockerHub
+      
+      - name: Tag and Push Docker image to DockerHub
         run: |
           docker tag weather-ml-app:latest ${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:latest
-
-      - name: Push Docker image to DockerHub
-        run: |
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:latest
-
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:latest
