@@ -5,65 +5,32 @@ on:
     workflows: ["CI Pipeline"]
     types:
       - completed
-    branches:
-      - main
 
 jobs:
   deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
+      - name: Checkout repo
         uses: actions/checkout@v3
-        
+
+      # --- kubectl setup ---
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
 
-      - name: Configure Kubernetes
+      # --- Write kubeconfig directly (plain YAML) ---
+      - name: Configure kubeconfig
         run: |
-          mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBE_CONFIG }}" > $HOME/.kube/config
-          chmod 600 $HOME/.kube/config
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_PLAIN }}" > ~/.kube/config
 
-      - name: Deploy to Kubernetes
+      # --- Apply K8s manifests ---
+      - name: Apply manifests
         run: |
-          cat <<EOF | kubectl apply -f -
-          apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: weather-ml-app
-          spec:
-            replicas: 2
-            strategy:
-              type: RollingUpdate
-              rollingUpdate:
-                maxUnavailable: 0
-            selector:
-              matchLabels:
-                app: weather-ml-app
-            template:
-              metadata:
-                labels:
-                  app: weather-ml-app
-              spec:
-                containers:
-                - name: weather-ml-app
-                  image: ${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:${{ github.sha }}
-                  ports:
-                  - containerPort: 8000
-          ---
-          apiVersion: v1
-          kind: Service
-          metadata:
-            name: weather-ml-app-service
-          spec:
-            type: LoadBalancer
-            selector:
-              app: weather-ml-app
-            ports:
-            - port: 80
-              targetPort: 8000
-          EOF
+          kubectl apply -f k8s/deployment.yml
+          kubectl apply -f k8s/service.yml
 
-      - name: Wait for deployment
-        run: kubectl rollout status deployment/weather-ml-app --timeout=3m
+      # --- Rolling update (zero downtime) ---
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/weather-ml-deployment --timeout=120s
