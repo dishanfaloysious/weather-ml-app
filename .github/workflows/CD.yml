@@ -1,36 +1,66 @@
-name: CD pipeline
+name: CD Pipeline
 
+# Trigger after CI pipeline completes successfully
 on:
   workflow_run:
-    workflows: ["CI Pipeline"]  # Replace with your CI workflow name
+    workflows: ["CI Pipeline"]
     types:
       - completed
 
 jobs:
   deploy:
-    runs-on: self-hosted  # Uses your EC2 runner
+    runs-on: self-hosted
 
     steps:
+      # 1. Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set kubeconfig
-        run: export KUBECONFIG=$HOME/.kube/config
+      # 2. Set up kubectl
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
 
-      - name: Deploy weather app (rolling update)
+      # 3. Configure kubeconfig from GitHub secret
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > $HOME/.kube/config
+
+      # 4. Log in to DockerHub
+      - name: DockerHub login
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 5. Pull the latest Docker image pushed by CI
+      - name: Pull Docker image
+        run: docker pull ${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:latest
+
+      # 6. Deploy to Kubernetes with rolling update
+      - name: Deploy to Kubernetes
         run: |
           # Check if deployment exists
-          if kubectl get deployment weather-ml-app; then
-            # Rolling update: update the image without deleting the deployment
-            kubectl set image deployment/weather-ml-app weather-ml-app=${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:v1 --record
+          if ! kubectl get deployment weather-ml-app; then
+            # Create deployment if it doesn't exist
+            kubectl create deployment weather-ml-app \
+              --image=${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:latest \
+              --replicas=2
+            kubectl expose deployment weather-ml-app --type=NodePort --port=5000 --target-port=5000
           else
-            # Create deployment if it doesn’t exist yet
-            kubectl create deployment weather-ml-app --image=${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:v1
-            kubectl expose deployment weather-ml-app --type=NodePort --port=5000
+            # Update deployment image (rolling update)
+            kubectl set image deployment/weather-ml-app \
+              weather-ml-app=${{ secrets.DOCKERHUB_USERNAME }}/weather-ml-app:latest
           fi
-          
-          # Wait for the rollout to finish
-          kubectl rollout status deployment/weather-ml-app
 
-      - name: Verify deployment
-        run: kubectl get pods -o wide
+          # Wait for rollout to complete
+          kubectl rollout status deployment/weather-ml-app --timeout=5m
+
+      # 7. Rollback on failure
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Deployment failed, rolling back..."
+          kubectl rollout undo deployment/weather-ml-app
